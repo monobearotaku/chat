@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package chat.v1;
+
+service ChatService {
+  rpc JoinChat (JoinChatRequest) returns (JoinChatResponse) {}
+  rpc ConnectToChat (stream ChatMessageRequest) returns (stream ChatMessageResponse) {}
+  rpc CreateChat (CreateChatRequest) returns (CreateChatResponse) {}
+}
+
+message JoinChatRequest {
+  int64 chatId = 1;
+}
+
+message JoinChatResponse {
+  string session = 1;
+}
+
+message ChatMessageRequest {
+  string message = 1;
+}
+
+message ChatMessageResponse {
+  string message = 1;
+  int64 userId = 2;
+  int64 chatId = 3;
+  string login = 4;
+}
+
+message CreateChatRequest {
+  string chatName = 1;
+}
+
+message CreateChatResponse {
+  int64 chatId = 1;
+}
