@@ -14,4 +14,6 @@ type Service interface {
 	CreateChat(context.Context, int64, string) (chat.Chat, error)
 	ValidateChat(context.Context, int64, int64) error
 	StartMessaging(context.Context, int64, int64, chatv1.ChatService_ConnectToChatServer) error
+	AddUserToChat(context.Context, int64, int64, int64) error
+	SendMessage(context.Context, string, chat.Message)
 }

@@ -16,6 +16,38 @@
     "application/json"
   ],
   "paths": {
+    "/chat.v1.ChatService/AddUserToChat": {
+      "post": {
+        "operationId": "ChatService_AddUserToChat",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AddUserToChatResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v1AddUserToChatRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ChatService"
+        ]
+      }
+    },
     "/chat.v1.ChatService/ConnectToChat": {
       "post": {
         "operationId": "ChatService_ConnectToChat",
@@ -151,6 +183,22 @@
           }
         }
       }
+    },
+    "v1AddUserToChatRequest": {
+      "type": "object",
+      "properties": {
+        "chatId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "userId": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1AddUserToChatResponse": {
+      "type": "object"
     },
     "v1ChatMessageRequest": {
       "type": "object",

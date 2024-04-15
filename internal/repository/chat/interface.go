@@ -8,8 +8,11 @@ import (
 )
 
 type Repo interface {
-	WithTx(postgres.Tx) Repo
-	GetById(context.Context, int64) (chat.Chat, error)
-	GetByName(context.Context, string) (chat.Chat, error)
-	CreateChat(context.Context, chat.Chat) (chat.Chat, error)
+	WithTx(tx postgres.Tx) Repo
+	GetById(ctx context.Context, chatID int64) (chat.Chat, error)
+	GetChatUsers(ctx context.Context, chatID int64) (chat.ChatUsers, error)
+	GetByName(ctx context.Context, name string) (chat.Chat, error)
+	CreateChat(ctx context.Context, chat chat.Chat) (chat.Chat, error)
+	AddUserToChat(ctx context.Context, chatID int64, userID int64, role chat.Role) error
+	SaveMessage(ctx context.Context, msg chat.Message) error
 }

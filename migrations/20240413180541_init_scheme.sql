@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS chats(
 CREATE TABLE IF NOT EXISTS users_to_chats(
     user_id BIGINT NOT NULL REFERENCES users(id),
     chat_id BIGINT NOT NULL REFERENCES chats(id),
+    role TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 

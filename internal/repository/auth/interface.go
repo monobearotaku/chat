@@ -13,4 +13,5 @@ type Repo interface {
 	WithTx(tx postgres.Tx) Repo
 	CreateUser(ctx context.Context, cred credentials.Credentials) error
 	GetUser(ctx context.Context, login domain.Login) (user.User, error)
+	GetUserById(ctx context.Context, id int64) (user.User, error)
 }

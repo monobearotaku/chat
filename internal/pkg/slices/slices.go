@@ -23,3 +23,7 @@ func RemoveFunc[T any](slice []T, f func(i int) bool) []T {
 
 	return newSlice
 }
+
+func FromElenent[T any](item T) []T {
+	return []T{item}
+}

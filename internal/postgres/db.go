@@ -24,11 +24,11 @@ func (db *db) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (Tx, error) 
 func NewDbConnection(ctx context.Context, config config.Config) (Db, func()) {
 	conn, err := pgx.Connect(context.Background(),
 		fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-			config.DbUser,
-			config.DbPassword,
-			config.DbHost,
-			config.DbPort,
-			config.DbName,
+			config.Db.User,
+			config.Db.Password,
+			config.Db.Host,
+			config.Db.Port,
+			config.Db.Name,
 		))
 
 	if err != nil {

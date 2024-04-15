@@ -4,6 +4,10 @@ export POSTGRES_USER = some-handsome-man
 export POSTGRES_PASSWORD = some-handsome-password
 export POSTGRES_DB = chat
 
+
+export KAFKA_BROKER = localhost:29092
+export KAFKA_TOPIC = messages
+
 run:
 	go run cmd/main/main.go
 

@@ -42,8 +42,9 @@ func (s *authService) SignUp(ctx context.Context, cred credentials.Credentials) 
 	}
 
 	defer func() {
-		if err != nil {
-			if err := tx.Commit(ctx); err != nil {
+		if err == nil {
+			err := tx.Commit(ctx)
+			if err != nil {
 				_ = tx.Rollback(ctx)
 			}
 		}

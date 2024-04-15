@@ -15,7 +15,7 @@ func main() {
 	diContainer := di.NewDiContainer(ctx)
 	defer diContainer.Stop()
 
-	diContainer.Run()
+	diContainer.Run(ctx)
 
 	exit := make(chan os.Signal, 1)
 	signal.Notify(exit, os.Interrupt, syscall.SIGTERM)

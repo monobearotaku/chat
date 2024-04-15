@@ -69,3 +69,27 @@ func (a *authRepo) GetUser(ctx context.Context, login domain.Login) (user.User, 
 
 	return usr, nil
 }
+
+func (a *authRepo) GetUserById(ctx context.Context, id int64) (user.User, error) {
+	const query = `
+		SELECT 
+			id,
+			login,
+			password
+		FROM users 
+		WHERE id = $1
+	`
+
+	usr := user.User{}
+
+	err := a.db.QueryRow(ctx, query, id).Scan(&usr.ID, &usr.Login, &usr.PasswordHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return user.User{}, domain.ErrNotFound
+		}
+
+		return user.User{}, err
+	}
+
+	return usr, nil
+}
