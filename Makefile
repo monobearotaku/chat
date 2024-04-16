@@ -15,7 +15,13 @@ client:
 	go run cmd/client/main.go
 
 migrate_up:
-	goose -dir migrations postgres "user=some-handsome-man password=some-handsome-password dbname=chat sslmode=disable" up
+	goose -dir migrations postgres "user=some-handsome-man password=some-handsome-password dbname=chat sslmode=disable host=localhost" up
 
 migrate_down:
-	goose -dir migrations postgres "user=some-handsome-man password=some-handsome-password dbname=chat sslmode=disable" down
+	goose -dir migrations postgres "user=some-handsome-man password=some-handsome-password dbname=chat sslmode=disable host=localhost" down
+
+protogen:
+	buf generate
+
+up:
+	docker compose up -d --build

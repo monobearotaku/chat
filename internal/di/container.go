@@ -3,7 +3,6 @@ package di
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/monobearotaku/online-chat-api/internal/config"
@@ -17,6 +16,7 @@ import (
 	"github.com/monobearotaku/online-chat-api/internal/service/auth"
 	"github.com/monobearotaku/online-chat-api/internal/service/chat"
 	"github.com/monobearotaku/online-chat-api/internal/service/tokenizer"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -40,7 +40,7 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 
 	listener, err := net.Listen("tcp", ":8080")
 	if err != nil {
-		log.Panicf("Failed to start grpc dialer: %v", err)
+		fmt.Printf("Failed to start grpc dialer: %v\n", err)
 	}
 
 	kafkaProducer := producer.NewProducer(config)
@@ -58,7 +58,15 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 
 	kafkaConcumer := consumer.NewConsumer(config, chatService)
 
-	dialer := grpc.NewServer()
+	dialer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			otelgrpc.UnaryServerInterceptor(),
+		),
+		grpc.ChainStreamInterceptor(
+			otelgrpc.StreamServerInterceptor(),
+		),
+	)
+
 	reflection.Register(dialer)
 
 	authV1 := auth_v1.NewAuthV1(dialer, authService)

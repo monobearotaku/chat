@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/monobearotaku/online-chat-api/internal/config"
 	chatDomain "github.com/monobearotaku/online-chat-api/internal/domain/chat"
 	"github.com/monobearotaku/online-chat-api/internal/pkg/slices"
@@ -21,9 +20,10 @@ type Consumer struct {
 func NewConsumer(config config.Config, chatService chat.Service) *Consumer {
 	return &Consumer{
 		r: kafka.NewReader(kafka.ReaderConfig{
-			Brokers: slices.FromElenent(config.Kafka.Broker),
-			Topic:   config.Kafka.Topic,
-			GroupID: uuid.NewString(),
+			Brokers:     slices.FromElenent(config.Kafka.Broker),
+			Topic:       config.Kafka.Topic,
+			GroupID:     "chat",
+			StartOffset: kafka.LastOffset,
 		}),
 		chatService: chatService,
 	}

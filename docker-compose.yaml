@@ -1,6 +1,19 @@
 version: "3.9"
 
 services:
+  chat:
+    build: .
+    environment:
+      POSTGRES_DB: "chat"
+      POSTGRES_USER: "some-handsome-man"
+      POSTGRES_PASSWORD: "some-handsome-password"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      KAFKA_BROKER: "kafka:9092"
+      KAFKA_TOPIC: "chat-topic"
+    ports:
+      - "8000:8080"
+      - "8001:8001"
   postgres:
     image: postgres:13.3
     environment:
