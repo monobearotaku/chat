@@ -15,9 +15,14 @@ type Kafka struct {
 	Topic  string
 }
 
+type Tracer struct {
+	Url string
+}
+
 type Config struct {
-	Db    Db
-	Kafka Kafka
+	Db     Db
+	Kafka  Kafka
+	Tracer Tracer
 }
 
 func ParseConfig() Config {
@@ -32,6 +37,9 @@ func ParseConfig() Config {
 		Kafka: Kafka{
 			Broker: os.Getenv("KAFKA_BROKER"),
 			Topic:  os.Getenv("KAFKA_TOPIC"),
+		},
+		Tracer: Tracer{
+			Url: os.Getenv("TRACER_URL"),
 		},
 	}
 }

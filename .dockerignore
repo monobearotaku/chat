@@ -3,3 +3,8 @@
 docker-compose.yaml
 .gitignore
 Makefile
+.dockerignore
+volumes
+volumes/**
+prometheus
+prometheus/**

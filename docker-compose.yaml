@@ -11,33 +11,62 @@ services:
       POSTGRES_PORT: "5432"
       KAFKA_BROKER: "kafka:9092"
       KAFKA_TOPIC: "chat-topic"
+      TRACER_URL: "http://jaeger:14268/api/traces"
     ports:
-      - "8000:8080"
+      - "8000:8000"
       - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+  jaeger:
+    image: jaegertracing/all-in-one
+    ports:
+      - "14268:14268"
+      - "16686:16686"
+
   postgres:
     image: postgres:13.3
     environment:
       POSTGRES_DB: "chat"
       POSTGRES_USER: "some-handsome-man"
       POSTGRES_PASSWORD: "some-handsome-password"
+    restart: unless-stopped
+    healthcheck:
+      test: /usr/bin/pg_isready -h localhost -U $$POSTGRES_USER
+      interval: 5s
+      timeout: 10s
+      retries: 120
     ports:
       - "5432:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
+    healthcheck:
+      test: nc -z localhost 2181 || exit -1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     ports:
       - 2181:2181
-    
+    volumes:
+      - ./volumes/zookeeper:/var/lib/zookeeper/data
+      - ./volumes/zookeeper-log:/var/lib/zookeeper/log
+
   kafka:
     image: confluentinc/cp-kafka:latest
-    depends_on:
-      - zookeeper
     ports:
       - 9092:9092
       - 29092:29092
+    restart: unless-stopped
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -45,3 +74,64 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - ./volumes/kafka-data:/var/lib/kafka/data
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./volumes/prometheus:/etc/prometheus/
+      - ./prometheus:/config/
+    container_name: prometheus
+    hostname: prometheus
+    command:
+      - --config.file=/config/prometheus.yml
+    ports:
+      - 9090:9090
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    container_name: exporter
+    hostname: exporter
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana
+    user: root
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - ./volumes/grafana:/var/lib/grafana
+      - ./volumes/grafana/provisioning/:/etc/grafana/provisioning/
+    container_name: grafana
+    hostname: grafana
+    restart: unless-stopped
+    environment:
+      TZ: "Europe/Moscow"
+    networks:
+      - default
