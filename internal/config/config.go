@@ -20,9 +20,10 @@ type Tracer struct {
 }
 
 type Config struct {
-	Db     Db
-	Kafka  Kafka
-	Tracer Tracer
+	Db      Db
+	Kafka   Kafka
+	Tracer  Tracer
+	AppName string
 }
 
 func ParseConfig() Config {

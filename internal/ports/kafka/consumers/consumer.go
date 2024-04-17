@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+
+	"github.com/google/uuid"
 	"github.com/monobearotaku/online-chat-api/internal/config"
 	chatDomain "github.com/monobearotaku/online-chat-api/internal/domain/chat"
 	"github.com/monobearotaku/online-chat-api/internal/pkg/slices"
@@ -15,17 +19,19 @@ import (
 type Consumer struct {
 	r           *kafka.Reader
 	chatService chat.Service
+	logger      log.Logger
 }
 
-func NewConsumer(config config.Config, chatService chat.Service) *Consumer {
+func NewConsumer(config config.Config, chatService chat.Service, logger log.Logger) *Consumer {
 	return &Consumer{
 		r: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:     slices.FromElenent(config.Kafka.Broker),
 			Topic:       config.Kafka.Topic,
-			GroupID:     "chat",
+			GroupID:     uuid.NewString(),
 			StartOffset: kafka.LastOffset,
 		}),
 		chatService: chatService,
+		logger:      logger,
 	}
 }
 
@@ -33,7 +39,7 @@ func (c *Consumer) Consume(ctx context.Context) {
 	for {
 		msg, err := c.r.ReadMessage(ctx)
 		if err != nil {
-			fmt.Println("Error reading message:", err)
+			level.Error(c.logger).Log("error", fmt.Errorf("error reading message:%w", err))
 			continue
 		}
 
@@ -41,10 +47,12 @@ func (c *Consumer) Consume(ctx context.Context) {
 
 		err = json.Unmarshal(msg.Value, &chatMessage)
 		if err != nil {
-			fmt.Println("Error unmarshaling message:", err)
+			level.Error(c.logger).Log("error", fmt.Errorf("error unmarshaling message:%w", err))
 			continue
 		}
 
-		c.chatService.SendMessage(ctx, string(msg.Key), chatMessage)
+		go func(key string, msg chatDomain.Message) {
+			c.chatService.SendMessage(ctx, key, msg)
+		}(string(msg.Key), chatMessage)
 	}
 }

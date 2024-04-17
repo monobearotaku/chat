@@ -144,7 +144,6 @@ func (c *chatRepo) SaveMessage(ctx context.Context, msg chat.Message) error {
 	const query = `
 		INSERT INTO messages(chat_id, user_id, message)
 		VALUES ($1, $2, $3)
-		ON CONFLICT (chat_id, user_id) DO NOTHING
 	`
 
 	_, err := c.db.Exec(ctx, query, msg.ChatID, msg.UserID, msg.Msg)

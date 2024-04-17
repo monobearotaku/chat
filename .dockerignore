@@ -4,7 +4,11 @@ docker-compose.yaml
 .gitignore
 Makefile
 .dockerignore
-volumes
-volumes/**
+.volumes
+.volumes/**
 prometheus
 prometheus/**
+nginx
+nginx/**
+migrations
+migrations/**

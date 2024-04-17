@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose NO TRANSACTION
 CREATE UNIQUE INDEX CONCURRENTLY users_to_chats_idx on users_to_chats(user_id, chat_id);
-CREATE UNIQUE INDEX CONCURRENTLY messages_users_to_chats_idx on messages(user_id, chat_id);
+CREATE INDEX CONCURRENTLY messages_users_to_chats_idx on messages(user_id, chat_id);
 
 -- +goose Down
 -- +goose StatementBegin

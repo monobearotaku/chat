@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
+	"time"
 
+	"github.com/go-kit/log"
+	"github.com/go-kit/log/level"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/monobearotaku/online-chat-api/internal/config"
@@ -25,8 +30,10 @@ import (
 	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	tracesdk "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -42,22 +49,27 @@ type DiContainer struct {
 	server *grpc.Server
 	mux    *http.Server
 
+	logger log.Logger
+
 	closeFunctions []func()
 }
 
 func NewDiContainer(ctx context.Context) *DiContainer {
 	config := config.ParseConfig()
 
+	logger := log.NewJSONLogger(os.Stderr)
+	logger = log.With(logger, "service", "chat")
+
 	closeFunctions := make([]func(), 0)
 
 	grpcListener, err := net.Listen("tcp", ":8000")
 	if err != nil {
-		fmt.Printf("Failed to start grpc dialer: %v\n", err)
+		level.Error(logger).Log("error", fmt.Errorf("failed to start grpc dialer: %v", err))
 	}
 
 	httpListener, err := net.Listen("tcp", ":8001")
 	if err != nil {
-		fmt.Printf("Failed to start http dialer: %v\n", err)
+		level.Error(logger).Log("error", fmt.Errorf("failed to start http dialer: %v", err))
 	}
 
 	kafkaProducer := producer.NewProducer(config)
@@ -73,23 +85,51 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 	authService := auth.NewAuthService(authRepo, tokenizer, db)
 	chatService := chat.NewChatService(chatRepo, authRepo, tokenizer, kafkaProducer, db)
 
-	kafkaConcumer := consumer.NewConsumer(config, chatService)
+	kafkaConcumer := consumer.NewConsumer(config, chatService, logger)
+
+	kaep := keepalive.EnforcementPolicy{
+		MinTime:             5 * time.Minute,
+		PermitWithoutStream: true,
+	}
+
+	kaserver := keepalive.ServerParameters{
+		Time:    10 * time.Minute,
+		Timeout: 20 * time.Second,
+	}
 
 	dialer := grpc.NewServer(
+		grpc.KeepaliveEnforcementPolicy(kaep),
+		grpc.KeepaliveParams(kaserver),
 		grpc.ChainUnaryInterceptor(
 			grpc_prometheus.UnaryServerInterceptor,
 			recovery.UnaryServerInterceptor(),
+			logging.UnaryServerInterceptor(
+				interceptorLogger(logger),
+				logging.WithFieldsFromContext(generateLogFields),
+				logging.WithLogOnEvents(
+					logging.FinishCall,
+				),
+			),
 		),
 		grpc.ChainStreamInterceptor(
 			grpc_prometheus.StreamServerInterceptor,
 			recovery.StreamServerInterceptor(),
+			logging.StreamServerInterceptor(
+				interceptorLogger(logger),
+				logging.WithFieldsFromContext(generateLogFields),
+				logging.WithLogOnEvents(
+					logging.StartCall,
+					logging.FinishCall,
+				),
+			),
 		),
+
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 	)
 
 	tracer, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(config.Tracer.Url)))
 	if err != nil {
-		fmt.Printf("Failed to start http tracer: %v\n", err)
+		level.Error(logger).Log("error", fmt.Errorf("failed to start http tracer: %v", err))
 	}
 
 	r, err := resource.Merge(
@@ -99,8 +139,12 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 			semconv.ServiceNameKey.String("chat"),
 		),
 	)
+	if err != nil {
+		level.Error(logger).Log("error", fmt.Errorf("failed to start tracer resource: %v", err))
+	}
 
 	otel.SetTracerProvider(tracesdk.NewTracerProvider(
+		tracesdk.WithSampler(tracesdk.AlwaysSample()),
 		tracesdk.WithBatcher(tracer),
 		tracesdk.WithResource(r),
 	))
@@ -123,6 +167,7 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 		mux: &http.Server{
 			Handler: mux,
 		},
+		logger:         logger,
 		closeFunctions: closeFunctions,
 		kafkaConcumer:  kafkaConcumer,
 	}
@@ -130,25 +175,50 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 
 func (di *DiContainer) Run(ctx context.Context) {
 	go func() {
-		fmt.Println("Di container started on port:", di.grpcListener.Addr().String())
+		level.Info(di.logger).Log("message", fmt.Sprintf("gRCP started on port: %s", di.grpcListener.Addr().String()))
 		_ = di.server.Serve(di.grpcListener)
 	}()
 
 	go func() {
+		level.Info(di.logger).Log("message", "kafka consumer started")
 		di.kafkaConcumer.Consume(ctx)
 	}()
 
 	go func() {
-		fmt.Println("Metrics started on port:", di.httpListener.Addr().String())
+		level.Info(di.logger).Log("message", fmt.Sprintf("metrics started on port: %s", di.grpcListener.Addr().String()))
 		di.mux.Serve(di.httpListener)
 	}()
 
 }
 
 func (di *DiContainer) Stop() {
-	fmt.Println("Stopping app")
+	level.Info(di.logger).Log("message", "stopping application")
 
 	_ = di.server.GracefulStop
 	_ = di.grpcListener.Close()
 	_ = di.httpListener.Close()
+}
+
+func generateLogFields(ctx context.Context) logging.Fields {
+	if span := trace.SpanContextFromContext(ctx); span.IsSampled() {
+		return logging.Fields{"traceID", span.TraceID().String()}
+	}
+	return nil
+}
+
+func interceptorLogger(l log.Logger) logging.Logger {
+	return logging.LoggerFunc(func(_ context.Context, lvl logging.Level, msg string, fields ...any) {
+		switch lvl {
+		case logging.LevelDebug:
+			_ = level.Debug(l).Log(fields...)
+		case logging.LevelInfo:
+			_ = level.Info(l).Log(fields...)
+		case logging.LevelWarn:
+			_ = level.Warn(l).Log(fields...)
+		case logging.LevelError:
+			_ = level.Error(l).Log(fields...)
+		default:
+			panic(fmt.Sprintf("unknown level %v", lvl))
+		}
+	})
 }
