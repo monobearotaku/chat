@@ -51,7 +51,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
+      - ./.volumes/postgres:/var/lib/postgresql/data
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -68,8 +68,8 @@ services:
     ports:
       - 2181:2181
     volumes:
-      - ./volumes/zookeeper:/var/lib/zookeeper/data
-      - ./volumes/zookeeper-log:/var/lib/zookeeper/log
+      - ./.volumes/zookeeper:/var/lib/zookeeper/data
+      - ./.volumes/zookeeper-log:/var/lib/zookeeper/log
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -85,7 +85,7 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - ./volumes/kafka-data:/var/lib/kafka/data
+      - ./.volumes/kafka-data:/var/lib/kafka/data
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -93,7 +93,7 @@ services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./volumes/prometheus:/etc/prometheus/
+      - ./.volumes/prometheus:/etc/prometheus/
       - /var/run/docker.sock:/var/run/docker.sock
       - ./prometheus:/config/
     container_name: prometheus
@@ -137,8 +137,8 @@ services:
     ports:
       - 3000:3000
     volumes:
-      - ./volumes/grafana:/var/lib/grafana
-      - ./volumes/grafana/provisioning/:/etc/grafana/provisioning/
+      - ./.volumes/grafana:/var/lib/grafana
+      - ./.volumes/grafana/provisioning/:/etc/grafana/provisioning/
     container_name: grafana
     hostname: grafana
     restart: unless-stopped
