@@ -14,7 +14,10 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
-      
+
+    - name: Install dependences    
+      run: go mod download && go mod verify
+
     - name: Build
       run: go build cmd/main/main.go
     
