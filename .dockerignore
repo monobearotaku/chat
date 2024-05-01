@@ -12,3 +12,5 @@ nginx
 nginx/**
 migrations
 migrations/**
+.github
+.github/**
