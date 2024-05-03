@@ -1,8 +1,8 @@
 version: "3.9"
 
 services:
-  chat:
-    build: .
+  chat1:
+    image: monootaku/chat:main
     environment:
       POSTGRES_DB: "chat"
       POSTGRES_USER: "some-handsome-man"
@@ -12,8 +12,40 @@ services:
       KAFKA_BROKER: "kafka:9092"
       KAFKA_TOPIC: "chat-topic"
       TRACER_URL: "http://jaeger:14268/api/traces"
-    deploy:
-      replicas: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  chat2:
+    image: monootaku/chat:main
+    environment:
+      POSTGRES_DB: "chat"
+      POSTGRES_USER: "some-handsome-man"
+      POSTGRES_PASSWORD: "some-handsome-password"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      KAFKA_BROKER: "kafka:9092"
+      KAFKA_TOPIC: "chat-topic"
+      TRACER_URL: "http://jaeger:14268/api/traces"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  chat3:
+    image: monootaku/chat:main
+    environment:
+      POSTGRES_DB: "chat"
+      POSTGRES_USER: "some-handsome-man"
+      POSTGRES_PASSWORD: "some-handsome-password"
+      POSTGRES_HOST: "postgres"
+      POSTGRES_PORT: "5432"
+      KAFKA_BROKER: "kafka:9092"
+      KAFKA_TOPIC: "chat-topic"
+      TRACER_URL: "http://jaeger:14268/api/traces"
     depends_on:
       postgres:
         condition: service_healthy
@@ -28,7 +60,9 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - chat
+      - chat1
+      - chat2
+      - chat3
 
   jaeger:
     image: jaegertracing/all-in-one

@@ -3,6 +3,8 @@ scrape_configs:
     scrape_interval: 5s
     dns_sd_configs:
       - names:
-          - chat  
+          - chat1 
+          - chat2  
+          - chat3  
         type: A
         port: 8001

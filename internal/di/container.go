@@ -154,6 +154,10 @@ func NewDiContainer(ctx context.Context) *DiContainer {
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/health", func (w http.ResponseWriter, r *http.Request)  {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ok"))
+	})
 
 	authV1 := auth_v1.NewAuthV1(dialer, authService)
 	chatV1 := chat_v1.NewChatV1(dialer, chatService, tokenizer)
